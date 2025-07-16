@@ -68,7 +68,7 @@ if page == "Home":
 
     st.markdown(
         "<div style='text-align: center; margin-top: 3rem;'>"
-        "Made with <span style='color:red; animation: blink 1.5s infinite;'>❤️</span> by <strong>Azad Bhasme</strong>"
+        "Made with <span style='color:red; animation: blink 1.5s infinite;'>❤️</span> by <strong>Azad Bhasme</strong> | CineSuggest © 2025"
         "</div><style>@keyframes blink {0%{opacity:1;}50%{opacity:0.3;}100%{opacity:1;}}</style>",
         unsafe_allow_html=True,
     )
@@ -90,6 +90,6 @@ elif page == "About":
     - TMDB API
     - Google Drive integration for large files
 
-    💡 Designed and developed with ❤️ by **Azad Bhasme**
+    💡 Designed and developed with ❤️ by **Azad Bhasme** | CineSuggest © 2025
     """)
 
