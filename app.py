@@ -6,85 +6,90 @@ import streamlit as st
 from dotenv import load_dotenv
 import gdown
 
-# Load TMDB API key
+# Load environment variables
 load_dotenv()
-TMDB_API_KEY = os.getenv("TMDB_API_KEY")
 
 # Download similarity.pkl from Google Drive if not exists
-SIMILARITY_FILE = "similarity.pkl"
-if not os.path.exists(SIMILARITY_FILE):
-    gdown.download(
-        "https://drive.google.com/uc?id=1Yzi3ElfOW9rHbbPMRAKo57GPRGonjvre",
-        SIMILARITY_FILE,
-        quiet=False
-    )
+SIMILARITY_PATH = "similarity.pkl"
+if not os.path.exists(SIMILARITY_PATH):
+    file_id = "1Yzi3ElfOW9rHbbPMRAKo57GPRGonjvre"
+    gdown.download(f"https://drive.google.com/uc?id={file_id}", SIMILARITY_PATH, quiet=False)
 
-# Load movie data and similarity matrix
-movies = pd.DataFrame(pickle.load(open('movies.pkl', 'rb')))
-similarity = pickle.load(open('similarity.pkl', 'rb'))
+# Load data
+movies = pd.DataFrame(pickle.load(open("movies.pkl", "rb")))
+similarity = pickle.load(open("similarity.pkl", "rb"))
 
-# Poster fetch helper
+# Constants
+PLACEHOLDER_POSTER = "https://via.placeholder.com/300x450?text=No+Image"
+TMDB_API_KEY = os.environ.get("TMDB_API_KEY")
+
+# Fetch poster from TMDB
 def fetch_poster(movie_id):
+    if not TMDB_API_KEY:
+        return PLACEHOLDER_POSTER
     try:
         url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={TMDB_API_KEY}&language=en-US"
         response = requests.get(url)
         data = response.json()
-        poster_path = data.get('poster_path')
-        return f"https://image.tmdb.org/t/p/w500{poster_path}" if poster_path else "https://via.placeholder.com/300x450?text=No+Image"
+        return f"https://image.tmdb.org/t/p/w500{data['poster_path']}" if data.get("poster_path") else PLACEHOLDER_POSTER
     except:
-        return "https://via.placeholder.com/300x450?text=No+Image"
+        return PLACEHOLDER_POSTER
 
 # Recommendation logic
 def recommend(movie):
-    index = movies[movies['title'] == movie].index[0]
-    distances = similarity[index]
-    movie_indices = sorted(list(enumerate(distances)), reverse=True, key=lambda x: x[1])[1:6]
-
-    recommended_movies = []
-    recommended_posters = []
-
+    idx = movies[movies['title'] == movie].index[0]
+    dists = similarity[idx]
+    movie_indices = sorted(list(enumerate(dists)), key=lambda x: x[1], reverse=True)[1:6]
+    titles, posters = [], []
     for i in movie_indices:
-        movie_id = movies.iloc[i[0]]['movie_id']
-        recommended_movies.append(movies.iloc[i[0]]['title'])
-        recommended_posters.append(fetch_poster(movie_id))
+        titles.append(movies.iloc[i[0]].title)
+        posters.append(fetch_poster(movies.iloc[i[0]].movie_id))
+    return titles, posters
 
-    return recommended_movies, recommended_posters
+# UI Config
+st.set_page_config(page_title="CineSuggest", page_icon="🍿", layout="wide")
 
-# UI Layout
-st.set_page_config(page_title="CineSuggest", layout="wide")
-st.markdown("<h1 style='text-align: center; color: white;'>🍿 Movie Recommender System</h1>", unsafe_allow_html=True)
-selected_movie_name = st.selectbox("🎥 Select a movie to get recommendations:", movies['title'].values)
+# Sidebar Navigation
+page = st.sidebar.radio("📂 Navigate", ["Home", "About"])
 
-if st.button("Recommend Movies"):
-    names, posters = recommend(selected_movie_name)
-    cols = st.columns(5)
-    for idx, col in enumerate(cols):
-        with col:
-            st.image(posters[idx])
-            st.markdown(f"**{names[idx]}**", unsafe_allow_html=True)
+# === Home Page ===
+if page == "Home":
+    st.markdown("<h1 style='text-align: center;'>🍿 Movie Recommender System</h1>", unsafe_allow_html=True)
 
-# Animated Footer
-st.markdown("""
-    <style>
-        .footer {
-            position: fixed;
-            bottom: 10px;
-            width: 100%;
-            text-align: center;
-            color: white;
-            font-weight: bold;
-            font-size: 18px;
-        }
-        .heartbeat {
-            display: inline-block;
-            animation: beat 1.2s infinite;
-        }
-        @keyframes beat {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.3); }
-        }
-    </style>
-    <div class="footer">
-        Made with <span class="heartbeat">❤️</span> by Azad Bhasme
-    </div>
-""", unsafe_allow_html=True)
+    selected_movie = st.selectbox("🎥 Select a movie to get recommendations:", movies['title'].values)
+
+    if st.button("Recommend Movies"):
+        names, posters = recommend(selected_movie)
+        cols = st.columns(5)
+        for idx, (title, poster) in enumerate(zip(names, posters)):
+            with cols[idx]:
+                st.image(poster, width=150)
+                st.markdown(f"**{title}**")
+
+    st.markdown(
+        "<div style='text-align: center; margin-top: 3rem;'>"
+        "Made with <span style='color:red; animation: blink 1.5s infinite;'>❤️</span> by <strong>Azad Bhasme</strong>"
+        "</div><style>@keyframes blink {0%{opacity:1;}50%{opacity:0.3;}100%{opacity:1;}}</style>",
+        unsafe_allow_html=True,
+    )
+
+# === About Page ===
+elif page == "About":
+    st.markdown("<h1 style='text-align: center;'>🎬 About CineSuggest</h1>", unsafe_allow_html=True)
+    st.write("""
+    **CineSuggest** is a content-based movie recommendation system that suggests similar films based on the one you select.
+    
+    🔍 It uses cosine similarity and metadata (genre, keywords, overview) to find the closest matches.
+
+    📡 Movie posters are fetched using the [TMDB API](https://www.themoviedb.org/).
+
+    🛠 Built with:
+    - Python
+    - Pandas
+    - Streamlit
+    - TMDB API
+    - Google Drive integration for large files
+
+    💡 Designed and developed with ❤️ by **Azad Bhasme**
+    """)
+
