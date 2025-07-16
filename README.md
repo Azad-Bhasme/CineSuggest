@@ -28,7 +28,7 @@ CineSuggest is a content-based movie recommendation system built using Streamlit
 ---
 
 🔺 **Live App** 🔻  
-👉 https://cinesuggest-byazad.streamlit.app/
+👉https://cinesuggest-byazad.streamlit.app/
 
 ---
 
